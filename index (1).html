@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solar sizing calculator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap">
+<style>
+:root{--bg:#EAF2F6;--surface:#FFFFFF;--ink:#0F1E2B;--muted:#556B7D;--line:#C9D8E2;--panel:#16324F;--panel-line:#4F7DA8;--sun:#F5A623;--focus:#0B63CE;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1822;--surface:#13242F;--ink:#E8F0F5;--muted:#93A8B8;--line:#27404F;--panel:#2E5E8C;--panel-line:#7FB0DB;--sun:#F7B84B;--focus:#7FB8FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0C1822;--surface:#13242F;--ink:#E8F0F5;--muted:#93A8B8;--line:#27404F;--panel:#2E5E8C;--panel-line:#7FB0DB;--sun:#F7B84B;--focus:#7FB8FF;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#1E0833 linear-gradient(160deg,#1A0630 0%,#35105A 38%,#58144F 72%,#2A0A2E 100%) fixed;color:#FFF5FA;font:400 1rem/1.5 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:2rem 1.25rem 3rem}
+h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1.05;font-weight:800;letter-spacing:-.02em;margin:0 0 .6rem;max-width:16ch}
+.lede{color:#E6C9E8;max-width:52ch;margin:0 0 2rem}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:1.5rem;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.card{position:relative;isolation:isolate;overflow:hidden;border-radius:16px;padding:1.25rem;box-shadow:0 10px 30px rgba(10,30,60,.18)}
+.card::before,.card::after{content:"";position:absolute;inset:0;pointer-events:none}
+.card::before{z-index:-2;background-size:300% 300%;animation:drift 9s ease-in-out infinite alternate}
+.card::after{z-index:-1;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.38) 50%,transparent 62%);background-size:250% 100%;background-repeat:no-repeat;animation:shine 4.5s ease-in-out infinite}
+@keyframes drift{from{background-position:0% 50%}to{background-position:100% 50%}}
+@keyframes shine{from{background-position:140% 0}to{background-position:-40% 0}}
+.in{--ink:#FFF5FA;--muted:#F1D3EA;--focus:#FFE08A;background:#5B1E8C;color:var(--ink)}
+.in::before{background-image:linear-gradient(120deg,#3B0F70,#7B2CBF,#B5179E,#E5383B,#3B0F70)}
+.in input,.in select{background:rgba(255,255,255,.92);color:#2B1700;border-color:rgba(43,23,0,.25)}
+.out{--ink:#FFF5F7;--muted:#F6CFDD;--panel:#0B2A5B;--panel-line:#6FA8F0;--focus:#FFE08A;background:#8E1B4A;color:var(--ink)}
+.out::before{background-image:linear-gradient(120deg,#D62839,#B0125A,#7B1FA2,#4A148C,#D62839)}
+.out .array{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28)}
+.out .err{color:#FFC9C2}
+.pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}
+.pkg{display:block;text-align:left;font:inherit;width:100%;cursor:pointer;border:2px solid transparent}
+.pkg[aria-pressed="true"]{border-color:var(--sun);box-shadow:0 0 0 3px var(--sun)}
+.pkg:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.pkg b{display:block;font-size:1.25rem}
+.pkg .price{font-size:1.7rem;font-weight:800;margin-top:.5rem}
+.sum{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
+.sum .big{font-size:clamp(2rem,6vw,3rem)}
+.sum .note{margin:.25rem 0 0}
+.backbtn{background:none;border:0;color:#FFF5FA;font:600 1rem "Bricolage Grotesque",system-ui,sans-serif;text-decoration:underline;cursor:pointer;min-height:44px;padding:0;margin-bottom:.75rem}
+.backbtn:focus-visible{outline:3px solid #FFE08A;outline-offset:3px}
+.buy.still{animation:none}
+.pop3{animation:fromTop 3s ease-out both}
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:calc(1.25rem + env(safe-area-inset-top,0px)) 1.25rem calc(1.25rem + env(safe-area-inset-bottom,0px));background:rgba(10,0,20,.7)}
+.modal[hidden]{display:none}
+.dlg{max-width:420px;width:100%;text-align:center;padding:1.75rem;animation:dlgin .4s ease-out both}
+.dlg h2{font-size:2rem;margin:0 0 .75rem}
+.dlg p{margin:.4rem 0}
+.dlg .buy{display:block;margin:1.25rem auto 0}
+@keyframes dlgin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.dlg{animation:none}}
+.badge{display:inline-block;margin-top:.35rem;padding:.15rem .6rem;border-radius:999px;background:var(--sun);color:#2B1700;font-weight:800;font-size:.85rem}
+.pkg s{font-size:1rem;font-weight:400;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.pop3{animation:none}}
+.right{min-width:0}
+.offer{margin-top:1.5rem;text-align:center}
+.offer p{margin:0 0 1rem;font-weight:800;font-size:clamp(1.3rem,3.2vw,1.75rem);line-height:1.25}
+.buy-wrap{min-height:58px;display:flex;align-items:center;justify-content:center}
+.buy{position:relative;overflow:hidden;width:150px;height:48px;border:0;border-radius:999px;cursor:pointer;font:800 1.05rem "Bricolage Grotesque",system-ui,sans-serif;color:#fff;background:linear-gradient(180deg,#FF4B57 0%,#E3112A 50%,#A8001A 100%);box-shadow:0 6px 18px rgba(227,17,42,.55),inset 0 1px 0 rgba(255,255,255,.5);animation:buypop 4s ease-in-out infinite}
+.buy::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%);background-size:250% 100%;background-repeat:no-repeat;animation:shine 2.5s ease-in-out infinite}
+@keyframes buypop{0%,75%,100%{width:150px;height:48px}85%,90%{width:160px;height:58px}}
+@media (prefers-reduced-motion:reduce){.buy,.buy::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.card::before,.card::after{animation:none}}
+.from-top{animation:fromTop 2s ease-out both}
+.from-bottom{animation:fromBottom 2s ease-out both}
+@keyframes fromTop{from{opacity:0;transform:translateY(-80px)}to{opacity:1;transform:none}}
+@keyframes fromBottom{from{opacity:0;transform:translateY(80px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.from-top,.from-bottom{animation:none}}
+fieldset{border:0;margin:0;padding:0}
+.row{margin-bottom:1rem}
+label{display:block;font-weight:600;margin-bottom:.3rem}
+.hint{font-weight:400;color:var(--muted);font-size:.875rem}
+.pair{display:flex;gap:.5rem}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.6rem .7rem;min-height:44px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.big{font-size:clamp(3rem,10vw,5rem);font-weight:800;line-height:1;letter-spacing:-.03em}
+.big small{font-size:1.1rem;font-weight:600;color:var(--muted);letter-spacing:0;margin-left:.35rem}
+.result-top{display:flex;flex-wrap:wrap;gap:1.5rem 2.5rem;margin-bottom:1.25rem}
+.lbl{color:var(--muted);font-size:.9rem;margin-top:.25rem}
+.array{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:3px;padding:10px;background:var(--bg);border-radius:10px;border:1px solid var(--line);min-height:70px}
+.cell{aspect-ratio:3/4;background:var(--panel);border:1px solid var(--panel-line);border-radius:2px;background-image:linear-gradient(var(--panel-line) 1px,transparent 1px),linear-gradient(90deg,var(--panel-line) 1px,transparent 1px);background-size:50% 33.3%;background-blend-mode:soft-light}
+.cell.sun{animation:pop .35s ease-out both}
+@keyframes pop{from{border-color:var(--sun);box-shadow:0 0 0 2px var(--sun)}to{}}
+@media (prefers-reduced-motion:reduce){.cell.sun{animation:none}}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin:1.25rem 0 0}
+.facts div{border-top:2px solid var(--sun);padding-top:.5rem}
+.facts b{display:block;font-size:1.35rem;font-weight:800}
+.note{color:var(--muted);font-size:.875rem;margin:.75rem 0 0}
+.err{color:#B3261E;font-weight:600;margin:0}
+@media (prefers-color-scheme:dark){.err{color:#FF8A80}}
+</style>
+</head>
+<body>
+<main id="calc">
+<h1>How many solar panels do you need?</h1>
+<p class="lede">Enter how much electricity you use. You’ll get the system size in kilowatts, the number of panels, and the roof area they take up.</p>
+<div class="grid">
+<section class="card in from-top" aria-labelledby="in-h">
+<h2 id="in-h" style="margin:0 0 1rem;font-size:1.15rem">Your energy use</h2>
+<fieldset>
+<div class="row"><label for="use">Electricity used</label>
+<div class="pair"><input id="use" type="number" inputmode="decimal" min="0" step="any" value="350"><select id="per" aria-label="Period"><option value="30">kWh per month</option><option value="1">kWh per day</option><option value="365">kWh per year</option></select></div></div>
+<div class="row"><label for="offset">Share to cover with solar <span class="hint">(%)</span></label><input id="offset" type="number" inputmode="decimal" min="1" max="150" value="100"></div>
+<div class="two">
+<div class="row"><label for="sun">Peak sun hours <span class="hint">per day</span></label><input id="sun" type="number" inputmode="decimal" min="1" max="9" step="0.1" value="5"></div>
+<div class="row"><label for="loss">System losses <span class="hint">(%)</span></label><input id="loss" type="number" inputmode="decimal" min="0" max="60" value="20"></div>
+</div>
+<div class="two">
+<div class="row"><label for="watt">Panel size <span class="hint">(watts)</span></label><input id="watt" type="number" inputmode="numeric" min="100" max="800" step="5" value="400"></div>
+<div class="row"><label for="area">Panel area <span class="hint">(m²)</span></label><input id="area" type="number" inputmode="decimal" min="0.5" step="0.01" value="1.95"></div>
+</div>
+</fieldset>
+<p class="note">Peak sun hours are the equivalent hours per day at full sunlight strength. Many parts of India get 4.5 to 6. Losses cover heat, wiring, dust, and inverter efficiency.</p>
+</section>
+<div class="right">
+<section class="card out from-bottom" aria-labelledby="out-h" aria-live="polite">
+<h2 id="out-h" class="hint" style="margin:0 0 .75rem;font-size:1rem">Recommended system</h2>
+<p id="err" class="err" hidden></p>
+<div id="res">
+<div class="result-top">
+<div><div class="big"><span id="kw">0</span><small>kW</small></div><div class="lbl">System size</div></div>
+<div><div class="big"><span id="n">0</span><small>panels</small></div><div class="lbl">Panel count</div></div>
+</div>
+<div id="array" class="array" role="img" aria-label="Illustration of the panel array"></div>
+<p id="cap" class="note" hidden></p>
+<div class="facts">
+<div><b id="d">0</b>kWh made per day</div>
+<div><b id="y">0</b>kWh made per year</div>
+<div><b id="roof">0</b>m² of roof space</div>
+</div>
+<p class="note">This is a planning estimate. Shading, roof angle, and local weather change real output, so confirm with an installer.</p>
+</div>
+</section>
+<div class="offer">
+<p>Buy a solar panel and get a free setup service instantly.</p>
+<div class="buy-wrap"><button type="button" class="buy" id="buyBtn">Buy now</button></div>
+</div>
+</div>
+</div>
+</main>
+<main id="buy" hidden>
+<button type="button" id="back" class="backbtn">Back to calculator</button>
+<h1>Solar panel prices</h1>
+<p class="lede">Choose a panel. Each option shows how many panels your system needs and the total price. Setup is free. Prices are samples for illustration.</p>
+<div id="pkgs" class="pkgs"></div>
+<section class="card in sum pop3" aria-live="polite">
+<div><div class="lbl" style="margin:0">Your total</div><div class="big" id="tot">₹0</div><p class="note" id="detail"></p><p class="note">Free setup service included.</p></div>
+<div><button type="button" class="buy still" id="order">Place order</button></div>
+</section>
+<p id="msg" class="note" role="status"></p>
+</main>
+<div id="modal" class="modal" hidden>
+<div class="dlg card out" role="dialog" aria-modal="true" aria-labelledby="m-h">
+<h2 id="m-h">Congratulations!</h2>
+<p id="m-sum"></p>
+<p>You get a <b>free installation service</b>.</p>
+<p>Your order will be delivered within <b>7 days</b>.</p>
+<button type="button" class="buy still" id="mclose">Done</button>
+</div>
+</div>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var ids=["use","per","offset","sun","loss","watt","area"];
+var shown=0,lastReq=0;
+function fmt(x,d){return x.toLocaleString("en-IN",{maximumFractionDigits:d,minimumFractionDigits:0})}
+function calc(){
+var use=parseFloat($("use").value),per=parseFloat($("per").value),off=parseFloat($("offset").value),
+sun=parseFloat($("sun").value),loss=parseFloat($("loss").value),w=parseFloat($("watt").value),a=parseFloat($("area").value);
+var bad=[use,off,sun,w,a].some(function(v){return !isFinite(v)||v<=0})||!isFinite(loss)||loss<0||loss>=100;
+$("err").hidden=!bad;$("res").hidden=bad;
+if(bad){$("err").textContent="Enter a positive number in every field. Losses must be under 100%.";return}
+var daily=use/per*(off/100);
+var kw=daily/(sun*(1-loss/100));lastReq=kw;
+var n=Math.ceil(kw*1000/w);
+var real=n*w/1000;
+var made=real*sun*(1-loss/100);
+$("kw").textContent=fmt(real,2);
+$("n").textContent=fmt(n,0);
+$("d").textContent=fmt(made,1);
+$("y").textContent=fmt(made*365,0);
+$("roof").textContent=fmt(n*a,1);
+var max=120,show=Math.min(n,max),box=$("array");
+var html="";for(var i=0;i<show;i++){html+='<div class="cell'+(i>=shown?' sun':'')+'"></div>'}
+box.innerHTML=html;shown=show;
+$("cap").hidden=n<=max;
+if(n>max)$("cap").textContent="Showing the first "+max+" of "+fmt(n,0)+" panels.";
+}
+ids.forEach(function(i){$(i).addEventListener("input",calc);$(i).addEventListener("change",calc)});
+calc();
+var P=[{n:"Standard",w:400,p:11500,d:0},{n:"Premium",w:540,p:15000,d:5},{n:"Bifacial",w:575,p:17500,d:9}],sel=0;
+function renderBuy(anim){var h="";P.forEach(function(x,i){var n=Math.max(1,Math.ceil(lastReq*1000/x.w));x.q=n;x.u=Math.round(x.p*(1-x.d/100));x.t=n*x.u;x.full=n*x.p;h+='<button type="button" class="card out pkg'+(anim?' pop3':'')+'" data-i="'+i+'" aria-pressed="'+(i===sel)+'"><b>'+x.n+' '+x.w+' W</b>'+(x.d?'<span class="badge">'+x.d+'% off</span>':'')+'<div class="price">₹'+fmt(x.u,0)+(x.d?' <s>₹'+fmt(x.p,0)+'</s>':'')+'</div><div class="note" style="margin:0">per panel</div><p class="note">'+n+' panels needed<br>Total ₹'+fmt(x.t,0)+'</p></button>'});$("pkgs").innerHTML=h;var s=P[sel];$("tot").textContent="₹"+fmt(s.t,0);$("detail").textContent=s.q+" × "+s.n+" "+s.w+" W panels"+(s.d?", "+s.d+"% discount applied (you save ₹"+fmt(s.full-s.t,0)+")":"");$("msg").textContent=""}
+function view(b){$("calc").hidden=b;$("buy").hidden=!b;if(b)renderBuy(true);window.scrollTo(0,0)}
+$("buyBtn").addEventListener("click",function(){view(true);try{location.hash="buy"}catch(e){}});
+$("back").addEventListener("click",function(){view(false);try{if(location.hash==="#buy")history.back()}catch(e){}});
+$("pkgs").addEventListener("click",function(e){var b=e.target.closest(".pkg");if(!b)return;sel=+b.getAttribute("data-i");renderBuy();$("pkgs").children[sel].focus()});
+$("order").addEventListener("click",function(){var s=P[sel];$("m-sum").textContent=s.q+" × "+s.n+" "+s.w+" W panels, total ₹"+fmt(s.t,0)+".";$("modal").hidden=false;$("mclose").focus()});
+function closeM(){$("modal").hidden=true;$("order").focus()}
+$("mclose").addEventListener("click",closeM);
+$("modal").addEventListener("click",function(e){if(e.target===this)closeM()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("modal").hidden)closeM()});
+window.addEventListener("hashchange",function(){view(location.hash==="#buy")});
+if(location.hash==="#buy")view(true);
+})();
+</script>
+</body>
+</html>
